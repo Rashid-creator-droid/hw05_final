@@ -103,10 +103,16 @@ class PostURLTests(TestCase):
             reverse(
                 'posts:add_comment',
                 kwargs={'post_id': self.post.pk}
-            ): urljoin(reverse('login'), f'?next=/posts/{self.post.pk}/comment/'),
+            ): urljoin(
+                reverse('login'),
+                f'?next=/posts/{self.post.pk}/comment/'
+            ),
             reverse(
                 'posts:post_create'
-            ): urljoin(reverse('login'), '?next=/create/'),
+            ): urljoin(
+                reverse('login'),
+                '?next=/create/'
+            ),
         }
         for url, url_2 in page_name.items():
             with self.subTest(url=url):

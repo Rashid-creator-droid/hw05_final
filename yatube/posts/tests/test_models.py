@@ -111,5 +111,8 @@ class CommentModelTest(TestCase):
                 )
 
     def test_comment_str(self):
-        """В поле __str__ объекта comment записано значение поля comment.text."""
+        """
+        В поле __str__ объекта comment
+        записано значение поля comment.text.
+        """
         self.assertEquals(self.comment.text, str(self.comment))
