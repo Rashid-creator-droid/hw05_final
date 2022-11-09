@@ -6,7 +6,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.core.cache import cache
 
-from ..models import Group, Post
+from ..models import Group, Post, Follow
 
 User = get_user_model()
 
@@ -113,6 +113,20 @@ class PostURLTests(TestCase):
                 reverse('login'),
                 '?next=/create/'
             ),
+            reverse(
+                'posts:profile_follow',
+                kwargs={'username': self.post.author},
+            ): urljoin(
+                reverse('login'),
+                f'?next=/profile/{self.post.author}/follow/',
+            ),
+            reverse(
+                'posts:profile_unfollow',
+                kwargs={'username': self.post.author},
+            ): urljoin(
+                reverse('login'),
+                f'?next=/profile/{self.post.author}/unfollow/',
+            ),
         }
         for url, url_2 in page_name.items():
             with self.subTest(url=url):
@@ -138,7 +152,7 @@ class PostURLTests(TestCase):
 
     def test_page_404(self):
         """Несуществующая страница вернет ошибку 404 с кастомным шаблоном"""
-        response = self.client.get('/nonexist-page/')
+        response = self.guest_client.get('/nonexist-page/')
         template = 'core/404.html'
         self.assertTemplateUsed(
             response,
