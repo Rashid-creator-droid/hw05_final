@@ -1,10 +1,10 @@
-from django.shortcuts import render, get_object_or_404, redirect
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.conf import settings
+from django.shortcuts import get_object_or_404, redirect, render
 
-from .models import Post, Group, User, Follow
-from .forms import PostForm, CommentForm
+from .forms import CommentForm, PostForm
+from .models import Follow, Group, Post, User
 
 
 def post_peginator(request, posts_list):
@@ -37,13 +37,13 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
     posts_list = Post.objects.filter(author=author)
     page_obj = post_peginator(request, posts_list)
-    if request.user.is_authenticated:
-        following = Follow.objects.filter(
+    following = (
+        request.user.is_authenticated
+        and Follow.objects.filter(
             user=request.user,
             author=author,
         ).exists()
-    else:
-        following = False
+    )
     context = {
         'page_obj': page_obj,
         'author': author,
@@ -58,7 +58,7 @@ def post_detail(request, post_id):
         author=posts.author
     )
     comments = posts.comments.all()
-    form = CommentForm(request.POST or None)
+    form = CommentForm()
     page_obj = post_peginator(request, posts_list)
     context = {
         'form': form,

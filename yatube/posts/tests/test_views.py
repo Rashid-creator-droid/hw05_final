@@ -2,14 +2,14 @@ import shutil
 import tempfile
 
 from django import forms
-from django.contrib.auth import get_user_model
-from django.test import Client, TestCase, override_settings
-from django.urls import reverse
 from django.conf import settings
-from django.core.files.uploadedfile import SimpleUploadedFile
+from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client, override_settings, TestCase
+from django.urls import reverse
 
-from ..models import Post, Group, Follow
+from ..models import Follow, Group, Post
 
 User = get_user_model()
 FIRST_NUMBER = 0
@@ -262,7 +262,7 @@ class CacheViewsTest(TestCase):
         self.guest_client = Client()
 
     def test_cache_index(self):
-        """Тест cash'a index."""
+        """Тест работы cache'a index."""
         page = reverse('posts:index')
         Post.objects.create(
             text='Test text',
@@ -271,10 +271,19 @@ class CacheViewsTest(TestCase):
         response = self.guest_client.get(page).content
         Post.objects.all().delete()
         response_1 = self.guest_client.get(page).content
-        self.assertEqual(response_1, response)
+        self.assertEqual(response, response_1)
+
+    def test_cache_clear_index(self):
+        """Тест работы очистки cache'a"""
+        page = reverse('posts:index')
+        Post.objects.create(
+            text='Test text',
+            author=self.user,
+        )
+        response = self.guest_client.get(page).content
         cache.clear()
-        response_2 = self.guest_client.get(page).content
-        self.assertNotEqual(response_1, response_2)
+        response_1 = self.guest_client.get(page).content
+        self.assertNotEqual(response, response_1)
 
 
 class FollowerTest(TestCase):
@@ -288,48 +297,70 @@ class FollowerTest(TestCase):
     def setUp(self):
         cache.clear()
         self.authorized_client = Client()
+        self.authorized_client.force_login(self.follower)
 
     def test_follow(self):
-        """Авторизованый пользователь может подписываться и отписываться"""
-        self.authorized_client.force_login(self.follower)
+        """Авторизованный пользователь может подписываться"""
         self.authorized_client.get(
             reverse(
                 'posts:profile_follow',
                 kwargs={'username': self.author},
             )
         )
-        followers_count = Follow.objects.filter(
-            user=self.follower
-        ).count()
-        self.assertEqual(followers_count, 1)
+        follow = Follow.objects.filter(
+            user=self.follower,
+            author=self.author,
+        ).exists()
+        self.assertTrue(follow)
+
+    def test_unfollow(self):
+        """Авторизованный пользователь может отписываться"""
+        Follow.objects.create(
+            user=self.follower,
+            author=self.author,
+        )
         self.authorized_client.get(
             reverse(
                 'posts:profile_unfollow',
                 kwargs={'username': self.author},
             )
         )
-        followers_count = Follow.objects.filter(
-            user=self.follower
-        ).count()
-        self.assertEqual(followers_count, 0)
+        unfollow = Follow.objects.filter(
+            user=self.follower,
+            author=self.author,
+        )
+        self.assertFalse(unfollow)
 
     def test_follower_post_author_display(self):
-        """Пользователь видит только свои подписки"""
-        self.authorized_client.force_login(self.follower)
+        """Пользователь видит свои подписки"""
+        test_text = 'Test text follow'
         Post.objects.create(
             author=self.author,
-            text='Test text'
+            text=test_text
         )
         Follow.objects.create(
             user=self.follower,
             author=self.author,
         )
-        response = len(self.authorized_client.get(
+        response = self.authorized_client.get(
             reverse('posts:follow_index')
-        ).context['page_obj'])
-        self.assertEqual(response, 1)
-        self.authorized_client.force_login(self.not_follower)
-        response = len(self.authorized_client.get(
+        )
+        follow_post = response.context['page_obj'][FIRST_NUMBER]
+        self.assertEqual(follow_post.text, test_text)
+        self.assertEqual(follow_post.author, self.author)
+
+    def test_not_follower_post_author_display(self):
+        """Пользователь не видит чужие подписки"""
+        test_text = 'Test text follow'
+        Post.objects.create(
+            author=self.author,
+            text=test_text
+        )
+        Follow.objects.create(
+            user=self.not_follower,
+            author=self.author,
+        )
+        response = self.authorized_client.get(
             reverse('posts:follow_index')
-        ).context['page_obj'])
-        self.assertEqual(response, 0)
+        ).context['page_obj']
+        self.assertEqual(len(response), 0)

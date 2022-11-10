@@ -1,5 +1,5 @@
-from django.db import models
 from django.contrib.auth import get_user_model
+from django.db import models
 
 User = get_user_model()
 FIRST_LETTER = 15
@@ -111,5 +111,5 @@ class Follow(models.Model):
     )
 
     class Meta:
-        verbose_name = 'Подписка',
+        verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'

@@ -1,13 +1,13 @@
 import shutil
 import tempfile
 
-from django.contrib.auth import get_user_model
-from django.test import Client, TestCase, override_settings
-from django.urls import reverse
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client, override_settings, TestCase
+from django.urls import reverse
 
-from ..models import Group, Post, Comment
+from ..models import Comment, Group, Post
 
 User = get_user_model()
 SMALL_GIF = (
@@ -119,7 +119,7 @@ class TestPostCreateForm(TestCase):
         self.assertEqual(editing_post.author, self.post.author)
         self.assertEqual(editing_post.image, f'posts/{UPLOADED_2.name}')
 
-    def test_anonymous_comment(self):
+    def test_authorized_user_comment(self):
         """
         Комментировать может только авторизованый пользователь.
         После коммента вернет на страницу поста.
@@ -144,4 +144,7 @@ class TestPostCreateForm(TestCase):
                 kwargs={'post_id': self.post.pk},
             ),
         )
+        editing_comment = Comment.objects.get(pk=self.post.pk)
         self.assertEqual(Comment.objects.count(), comment_count + 1)
+        self.assertEqual(editing_comment.text, comment_text)
+        self.assertEqual(editing_comment.author, self.post.author)
