@@ -22,7 +22,7 @@ pip install -r requirements.txt
 ``` 
 - Перейти в каталог с файлом manage.py
 ``` 
-cd api_yamdb/
+cd hw05_final/
 ```
 - Выполнить миграции:
 ```
